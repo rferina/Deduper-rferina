@@ -15,24 +15,6 @@ Reads are duplicates if:
 -same umi
 
 
--duplicate on + strand
--duplicate on - strand
-
--softclipping +
--softclipping -
--reads with diff umi but same pos,strand, chromo [same seq]
--diff chromo, same everything
--same chromo, diff ever
--diff strand same everything
--diff pos, same everything
--same same same same
-
--unique + duplicate
--unique - strand; exact dup; adjusted
-2 same 3 diff
-
-11
-
 Psuedocode:
 Use samtools to sort SAM file by chromosome and position.
 Create empty set to later check duplicates against.
@@ -55,16 +37,18 @@ Check if tuple is in the set,
 
 
 Functions:
-col 2 to see strand
-
 
 def mapped_strand_checker(bitwise):
 """
-Takes in . Returns strandedness if
+Takes in SAM file bitwise flag. Returns strandedness (+ or -) if
 the read is mapped.
 """
 return strandedness
 
+input: 107
+expected output: positive
+input: 83
+expected output: negative
 
 
 def adjust_position(sam_position, strand, cigar):
@@ -75,8 +59,11 @@ start position.
 """
 return five_prime_start
 
-input: 15, +,   
-expected output:
+input: 5, +, 5S15M   
+expected output: 5
 
-input: 10, -,
-expected output:
+input: 10, -, 3S17M
+expected output: 47
+
+input: 10, -, 4S10M50N5M3S
+expected output: 78
