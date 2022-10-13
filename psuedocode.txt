@@ -1,0 +1,82 @@
+Problem Definition:
+Reference-based PCR Duplicates are artifacts from PCR that aligned to the same position on the reference genome. They are identical molecules that are on the same DNA strand
+and chromosome. They also have the same UMI, or unique molecular identifier, which is a barcode added to each unique molecule before PCR. 
+PCR duplicates can result in bias in the data, as they could appear as overrepresentation in gene expression data, and potentially inflate the coverage. 
+Thus, we need to remove the PCR duplicates, so that we have a more accurate representation of the data.
+One challenge is having to account for softclipping, which occurs when the either end of a transcript doesn't align well to the reference genome. It's known as softclipping
+because the 5' and 3' ends are still included in the SAM file. SAM files only provide the leftmost one-based mapping position, and softclipping is not mapped, so the 
+position has to be adjusted to account for the unmapped 5' start position. 
+Another challenge is the size of SAM files, as they should not be loaded into memory. 
+
+Reads are duplicates if:
+-same chromo
+-same 5' start position
+-same strand
+-same umi
+
+
+-duplicate on + strand
+-duplicate on - strand
+
+-softclipping +
+-softclipping -
+-reads with diff umi but same pos,strand, chromo [same seq]
+-diff chromo, same everything
+-same chromo, diff ever
+-diff strand same everything
+-diff pos, same everything
+-same same same same
+
+-unique + duplicate
+-unique - strand; exact dup; adjusted
+2 same 3 diff
+
+11
+
+Psuedocode:
+Use samtools to sort SAM file by chromosome and position.
+Create empty set to later check duplicates against.
+Read in sorted SAM file one line at a time, save the columns as variables.
+Check if the read is mapped, and what strand its on with function mapped_strand_checker. 
+Obtain the 5' start position with the adjust_position function.
+    This function will parse the CIGAR string differently:
+    if its on the + strand,
+        account for potential soft clipping on the leftmost S
+    if its - strand,
+        account for potential soft clipping on the rightmost S
+        parse N (skipped region), D (reference deletion), I (reference insertion)
+Save the 5' start position, strand, chromosome, and UMI in a tuple.
+Check if tuple is in the set, 
+    if its in the set already, its a duplicate; don't write it to the output SAM file.
+    if its not in the set, the read is not a duplicate; add it to the set.
+        Write out the line to output SAM file.
+    
+
+
+
+Functions:
+col 2 to see strand
+
+
+def mapped_strand_checker(bitwise):
+"""
+Takes in . Returns strandedness if
+the read is mapped.
+"""
+return strandedness
+
+
+
+def adjust_position(sam_position, strand, cigar):
+"""
+Takes in the SAM file position, DNA strand, and CIGAR 
+string, parses the CIGAR string and returns the 5'
+start position.
+"""
+return five_prime_start
+
+input: 15, +,   
+expected output:
+
+input: 10, -,
+expected output:
