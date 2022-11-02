@@ -1,0 +1,252 @@
+Rachel Ferina Lab Notebook
+Python version: Python 3.10.4 Environment: No environment used
+
+
+20 Oct 2022
+Added argparse commands.
+
+23 Oct 2022
+
+Added code to read in STL96 and create the valid_umis set from it.
+
+Printed the length of valid_umis set, and its 95. However, STL96.txt has 96 umis. Confirmed all 96 were unique with cat STL96.txt | sort | uniq -c
+
+Made real_umis file from the previous command. Made set_umis file from printing the line after adding it to the set. set_umis has 95 lines, real_umis has 96.
+
+diff -s set_umis real_umis 
+0a1
+> AACGCCAT
+
+The first umi isn't being added to the set for some reason.
+
+Removed the umi_file.readline(), and now there's 96 umis!
+
+Verified the files are accurate.
+diff -s set_umis real_umis 
+Files set_umis and real_umis are identical
+
+24 Oct 2022
+
+Translated psuedocode to code, added a dictionary for the duplicates to be able to count them.
+
+Tried adding help argument to argparse.
+    parser.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS, help='Takes in a uniquely mapped SAM file, presorted by chromosome and position via samtools. Assumes reads are single-end.')
+Got this error:
+File "/projects/bgmp/rferina/miniconda3/lib/python3.10/argparse.py", line 1440, in add_argument
+    return self._add_action(action)
+  File "/projects/bgmp/rferina/miniconda3/lib/python3.10/argparse.py", line 1806, in _add_action
+    self._optionals._add_action(action)
+  File "/projects/bgmp/rferina/miniconda3/lib/python3.10/argparse.py", line 1642, in _add_action
+    action = super(_ArgumentGroup, self)._add_action(action)
+  File "/projects/bgmp/rferina/miniconda3/lib/python3.10/argparse.py", line 1454, in _add_action
+    self._check_conflict(action)
+  File "/projects/bgmp/rferina/miniconda3/lib/python3.10/argparse.py", line 1591, in _check_conflict
+    conflict_handler(action, confl_optionals)
+  File "/projects/bgmp/rferina/miniconda3/lib/python3.10/argparse.py", line 1600, in _handle_conflict_error
+    raise ArgumentError(action, message % conflict_string)
+argparse.ArgumentError: argument -h/--help: conflicting option strings: -h, --help
+
+Notes:
+
+# strand -: pos: 42
+# cigar: 3S47M6I111D1000N30M
+
+# insertion to the reference 
+# N = splicing 
+
+# D not d
+
+# 42 + 47 + 111 + 1000 + 30 = 1230
+# 6 in reference not in read
+# add D, N but ignore I and depending on side of S
+
+
+# D in reference but not in read, but have to account moving in reference not read
+# quality trimming could have 2 molecules sequenced, came from different places on the flow cell 
+
+# diff flowcell positions = diff molecules; quality difference at edges? get diff call
+
+
+# + strand =just left softclipping 
+
+# regex 
+
+# bitwise
+# QNAME = umi
+# RNAME = chromo/scaffold
+# CIGAR = CIGAR
+
+# aligment positioin = genomic position
+
+# paired end reads:
+# 100 read length
+# gap of 88 
+# gap may change because of fragmentation
+# original 
+# adapters should not be sequenceable
+
+# biological replicate = higher gene expression
+
+# PCR duplicate share a chromo, start position, strand, umi (added during library prep)
+
+30 Oct 2022
+
+Wrote and tested strand checker function.
+
+31 Oct 2022
+
+Decided to ditch write out function, and just save a line variable to write out so I avoid indexing columns there could be extra columns.
+# def write_out(filename, columns):
+#     '''
+#     Takes in a filename to write out to, and the
+#     4 lines of the record that will be written out. 
+#     Writes out the record to the specified output SAM file.
+#     Does not return anything.'''
+#     for col in range(len(columns)):
+#         filename.write(f'{col}\t')
+#     filename.write('\n')
+    # filename.write(f'{columns[0]}\t{bitwise}\t{chromo}\t{five_prime_start}\t{columns[4]}\t{cigar}\t{columns[6]}\t{columns[7]}\t{columns[8]}\t{columns[9]}\t{columns[10]}\n')
+# think there will be extra tab after last col
+
+
+Several attempts at regex function in test_func.py. Having trouble obtaining the one or two digits before the S.
+# only gets 1 digit before S
+left_s = re.findall(r"[\d+][S]", cigar)
+# ONLY WORKS ONE DIGIT
+left_s = re.findall(r"^[\d+][S]", cigar)
+#GIVES EMPTY LISTS
+left_s = re.findall(r"^[\.+][S]", cigar)
+# WORKS IF ONE DIGIT BEFORE S
+left_s = re.findall("^[0-9+][S]", cigar)
+#WORKS IF TWO DIGITS BEFORE S
+left_s = re.findall("^[0-9+][0-9+][S]", cigar)
+
+Double checked that I could write out the header lines and the following record line without an extra blank line between them. (Edited input_test.sam to have header lines.)
+
+1 Nov 2022
+
+Added () instead of [] to regex, grouped to account for multiple digits and it works.
+Added () around whole group bc could be in cigar string multiple times. Now it extracts the #S and # in a list, so I can index it.
+Previously had this to get the number before S: re.split(r'[S]', left_s)[0]
+
+Had to convert bitwise to int in bitwise.
+
+cigar string function passed my test files, but running it in my script got this error:
+five_prime_start += skipped + deleted + right_s + matched
+TypeError: can only concatenate str (not "int") to str
+made sam_position an int
+
+It worked!
+
+Still output is not fully what expected though.
+diff -s deduplicated.sam expected_output_test.sam 
+6c6
+< NS500451:154:HWKTMBGXX:1:11101:24260:1121:CTGTTCAC    107     2       100     36      45M     *       0       0       TCCACCACAAT     6AEEEEEEAE
+---
+> NS500451:154:HWKTMBGXX:1:11101:24260:1121:CTGTTCAC    0       2       76814284        36      45M     *       0       0       TCCACCACAAT     6AEEEEEEAE
+10c10
+< NS500451:154:HWKTMBGXX:1:11101:24260:1121:GAAGACCA    48      15      40      30      10M     *       0       0       CAAAAAAAAAA     6AAAAAAAAE
+---
+> NS500451:154:HWKTMBGXX:1:11101:24260:1121:GAAGACCA    48      15      40      30      10M     *       0       0       CAAAAAAAAAA     6AAAAAAAAE
+\ No newline at end of file
+
+old input test file: 
+@HD
+@SQ
+@SQ 
+@SQ
+@SQ t
+NS500451:154:HWKTMBGXX:1:11101:24260:1121:CTGTTCAC	107	2	100	36	45M	*	0	0	TCCACCACAAT	6AEEEEEEAE
+NS500451:154:HWKTMBGXX:1:11101:24260:1121:CTGTTCAC	107	2	100	36	45M	*	0	0	TCCACCACAAT	6AEEEEEEAE
+NS500451:154:HWKTMBGXX:1:11101:24260:1121:GTTCTGCT	83	10	5463	30	89M	*	0	0	CAGAGAGAGAG	6AAAAAAAAE
+NS500451:154:HWKTMBGXX:1:11101:24260:1121:GTTCTGCT	83	10	5463	30	89M	*	0	0	CAGAGAGAGAG	6AAAAAAAAE
+NS500451:154:HWKTMBGXX:1:11101:24260:1121:AGCATGGA	207	21	85	32	15M	*	0	0	TCCGGGGGGGT	6A666666AE
+NS500451:154:HWKTMBGXX:1:11101:24260:1121:AGCATGGA	207	21	85	32	4S15M	*	0	0	TCCGGGGGGGT	6A666666AE
+NS500451:154:HWKTMBGXX:1:11101:24260:1121:GAAGACCA	48	15	40	30	10M	*	0	0	CAAAAAAAAAA	6AAAAAAAAE
+NS500451:154:HWKTMBGXX:1:11101:24260:1121:GAAGACCA	48	15	40	30	8M2S	*	0	0	CAAAAAAAAAA	6AAAAAAAAE
+
+old test file output:
+NS500451:154:HWKTMBGXX:1:11101:24260:1121:CTGTTCAC	0	2	76814284	36	45M	*	0	0	TCCACCACAAT	6AEEEEEEAE
+NS500451:154:HWKTMBGXX:1:11101:24260:1121:GTTCTGCT	83	10	5463	30	89M	*	0	0	CAGAGAGAGAG	6AAAAAAAAE
+NS500451:154:HWKTMBGXX:1:11101:24260:1121:AGCATGGA	207	21	85	32	15M	*	0	0	TCCGGGGGGGT	6A666666AE
+NS500451:154:HWKTMBGXX:1:11101:24260:1121:AGCATGGA	207	21	85	32	4S15M	*	0	0	TCCGGGGGGGT	6A666666AE
+NS500451:154:HWKTMBGXX:1:11101:24260:1121:GAAGACCA	48	15	40	30	10M	*	0	0	CAAAAAAAAAA	6AAAAAAAAE
+
+
+Ran Ferina_deduper.py on test.sam, and got 53 lines (last line is empty). This does not match my peers getting 21 lines.  
+cat deduplicated.sam | grep -v "^@" | wc -l
+54
+
+Fixed test files to add more cases.
+Still not expected output.
+diff -s deduplicated.sam expected_output_test.sam 
+10,11c10,11
+< NS500451:160:HWKTMBGXX:1:11101:24260:1121:GAAGACCA    16      15      40      30      10M     *       0       0       CAAAAAAAAAA     6AAAAAAAAE
+< NS500451:163:HWKTMBGXX:1:11101:24260:1121:TGCTTGGA    16      15      550     30      3M2D200I10N8S   *       0       0       CAAAAAAAAAA     6AAAAAAAAE
+---
+> NS500451:160:HWKTMBGXX:1:11101:24260:1121:GAAGACCA    0       15      40      30      10M     *       0       0       CAAAAAAAAAA     6AAAAAAAAE
+> NS500451:164:HWKTMBGXX:1:11101:24260:1121:TGCTTGGA    0       15      520     30      20M3N30S        *       0       0       CAAAAAAAAAA     6AAAAAAAAE
+
+Realized I put the second duplicate, it should be 163 not 164 in my expected output. 
+ diff -s deduplicated.sam expected_output_test.sam 
+10c10
+< NS500451:160:HWKTMBGXX:1:11101:24260:1121:GAAGACCA    16      15      40      30      10M     *       0       0       CAAAAAAAAAA     6AAAAAAAAE
+---
+> NS500451:160:HWKTMBGXX:1:11101:24260:1121:GAAGACCA    0       15      40      30      10M     *       0       0       CAAAAAAAAAA     6AAAAAAAAE
+Also forgot to change the strand to negative in the output!
+
+diff -s deduplicated.sam expected_output_test.sam 
+Files deduplicated.sam and expected_output_test.sam are identical
+
+Added counters to compare # unique, # duplicates, # header lines,  # invalid umis, # total records.
+on input_sam_test.sam:
+Header Lines: 5
+Total Records: 12
+Unique Records: 7
+Duplicate Records: 11
+Invalid UMIs: 1
+
+Numbers look good except for duplicate records. 11/12 records weren't duplicates. There should only be 8 if you count both duplicates.
+
+On test.sam:
+Header Lines: 24
+Total Records: 76
+Unique Records: 54
+Duplicate Records: 75
+Invalid UMIs: 1
+
+Changed if to elif for my duplicates, and got results that match my peers on test.sam.
+Header Lines: 24
+Total Records: 76
+Unique Records: 54
+Duplicate Records: 21
+Invalid UMIs: 1
+
+On input_sam_test, I get 4 for the duplicates, which is good as this means it only counts duplicates once.
+Header Lines: 5
+Total Records: 12
+Unique Records: 7
+Duplicate Records: 4
+Invalid UMIs: 1
+
+Going to remove duplicates_dict and the output file, it's unnecessary with the counts.
+  # if location_tuple not in duplicates_dict:
+  #     duplicates_dict[location_tuple] = 1
+  # else:
+  #     duplicates_dict[location_tuple] += 1
+      for keys,vals in duplicates_dict.items(): 
+        dupe_dict.write(str(keys) + '\t'+ str(vals) + '\n')
+
+/usr/bin/time: cannot run ./Ferina_deduper.py: Permission denied
+Command exited with non-zero status 126
+	Command being timed: "./Ferina_deduper.py -f /projects/bgmp/shared/deduper/C1_SE_uniqAlign.sam -o deduplicated.sam -u STL96.txt"
+
+ chmod 755 run_deduper.sh
+
+Output running on /projects/bgmp/shared/deduper/C1_SE_uniqAlign.sam
+Header Lines: 64
+Total Records: 18186410
+Unique Records: 13724084
+Duplicate Records: 4462326
+Invalid UMIs: 0
+Doesn't match my peers, but in the same ballpark.
