@@ -10,4 +10,4 @@
 #SBATCH --cpus-per-task=1     ### Number of cpus per task
 #SBATCH --account=bgmp      ### Account used for job submission
 
-/usr/bin/time -v ./Ferina_deduper.py -f /projects/bgmp/shared/deduper/C1_SE_uniqAlign.sam -o deduplicated.sam  -u STL96.txt
+/usr/bin/time -v ./Ferina_deduper.py -f /projects/bgmp/shared/deduper/C1_SE_uniqAlign.sam -o /projects/bgmp/rferina/bioinfo/Bi624/dedup/Deduper-rferina/C1_SE_deduplicated.sam  -u STL96.txt

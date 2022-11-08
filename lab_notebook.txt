@@ -1,8 +1,11 @@
 Rachel Ferina Lab Notebook
-Python version: Python 3.10.4 Environment: No environment used
+
+Python version: Python 3.10.4 
+Environment: No environment used
 
 
 20 Oct 2022
+
 Added argparse commands.
 
 23 Oct 2022
@@ -126,15 +129,15 @@ Double checked that I could write out the header lines and the following record 
 1 Nov 2022
 
 Added () instead of [] to regex, grouped to account for multiple digits and it works.
-Added () around whole group bc could be in cigar string multiple times. Now it extracts the #S and # in a list, so I can index it.
+Added () around whole group because could be in cigar string multiple times. Now it extracts [#S, #] in a list, so I can index it.
 Previously had this to get the number before S: re.split(r'[S]', left_s)[0]
 
-Had to convert bitwise to int in bitwise.
+Had to convert bitwise to integer in strand_checker function.
 
 cigar string function passed my test files, but running it in my script got this error:
 five_prime_start += skipped + deleted + right_s + matched
 TypeError: can only concatenate str (not "int") to str
-made sam_position an int
+Made sam_position an integer in adjust_position function.
 
 It worked!
 
@@ -172,12 +175,16 @@ NS500451:154:HWKTMBGXX:1:11101:24260:1121:AGCATGGA	207	21	85	32	15M	*	0	0	TCCGGG
 NS500451:154:HWKTMBGXX:1:11101:24260:1121:AGCATGGA	207	21	85	32	4S15M	*	0	0	TCCGGGGGGGT	6A666666AE
 NS500451:154:HWKTMBGXX:1:11101:24260:1121:GAAGACCA	48	15	40	30	10M	*	0	0	CAAAAAAAAAA	6AAAAAAAAE
 
+Commands to run Ferina_deduper.py:
+python Ferina_deduper.py -f /projects/bgmp/rferina/bioinfo/Bi624/dedup/Deduper-rferina/test.sam -o /projects/bgmp/rferina/bioinfo/Bi624/dedup/Deduper-rferina/large_test_output.sam  -u STL96.txt
+python Ferina_deduper.py -f /projects/bgmp/rferina/bioinfo/Bi624/dedup/Deduper-rferina/input_sam_test.sam -o /projects/bgmp/rferina/bioinfo/Bi624/dedup/Deduper-rferina/deduplicated.sam  -u STL96.txt
 
-Ran Ferina_deduper.py on test.sam, and got 53 lines (last line is empty). This does not match my peers getting 21 lines.  
+
+Ran Ferina_deduper.py on test.sam, and got 53 lines (last line is empty).  
 cat deduplicated.sam | grep -v "^@" | wc -l
 54
 
-Fixed test files to add more cases.
+Fixed test files to add more cases, and changed numbers in the first column to better keep track of cases.
 Still not expected output.
 diff -s deduplicated.sam expected_output_test.sam 
 10,11c10,11
@@ -215,7 +222,7 @@ Unique Records: 54
 Duplicate Records: 75
 Invalid UMIs: 1
 
-Changed if to elif for my duplicates, and got results that match my peers on test.sam.
+Changed if to elif to see if the tuple is in the valid_reads set to catch duplicates, and got results that match my peers on test.sam.
 Header Lines: 24
 Total Records: 76
 Unique Records: 54
@@ -237,10 +244,13 @@ Going to remove duplicates_dict and the output file, it's unnecessary with the c
       for keys,vals in duplicates_dict.items(): 
         dupe_dict.write(str(keys) + '\t'+ str(vals) + '\n')
 
+
+Made script run_deduper.sh to run it on the larger C1_SE_uniqAlign.sam file in an interactive node.
 /usr/bin/time: cannot run ./Ferina_deduper.py: Permission denied
 Command exited with non-zero status 126
 	Command being timed: "./Ferina_deduper.py -f /projects/bgmp/shared/deduper/C1_SE_uniqAlign.sam -o deduplicated.sam -u STL96.txt"
 
+Changed permissions to rerun:
  chmod 755 run_deduper.sh
 
 Output running on /projects/bgmp/shared/deduper/C1_SE_uniqAlign.sam
@@ -249,11 +259,155 @@ Total Records: 18186410
 Unique Records: 13724084
 Duplicate Records: 4462326
 Invalid UMIs: 0
-Doesn't match my peers, but in the same ballpark.
+Doesn't match quite my peers' counts, but in the same range.
 
 4 Nov 2022
-FIxed left S.
+
+Realized I forgot to add a ^ to catch the first S for the leftmost S in my adjust_position function. Added more test cases.
+
+Now my numbers match my peers.
+
+Added help description in the argparse, rather than trying to rewrite -h and cause a conflict.
 
 5 Nov 2022
 
-Realized don't need to make a list for regex. Simplified adjust_position function.
+Realized don't need to have a list for regex for adjust_position. Simplified adjust_position function for S, as there will only be one S that matters, 
+not potentially a list of multiple that have to be summed.
+
+6 Nov 2022
+
+Fixed argparse file arguments to write out to the file specified.
+
+Moved adjust_position and strand_checker along with test cases to bioinfo.py.
+
+7 Nov 2022
+
+Reran on C1_SE_uniqAlign.sam again after cleaning up code.
+
+Command being timed: "./Ferina_deduper.py -f /projects/bgmp/shared/deduper/C1_SE_uniqAlign.sam -o /projects/bgmp/rferina/bioinfo/Bi624/dedup/Deduper-rferina/C1_SE_deduplicated.sam -u STL96.txt"
+	User time (seconds): 74.87
+	System time (seconds): 2.63
+	Percent of CPU this job got: 99%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 1:17.89
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 3255104
+
+Header Lines: 64
+Records Count: 18186410
+Unique Records: 13719048
+Duplicate Records: 4467362
+Invalid UMIs: 0
+
+Command to see unique reads per chromosome:
+cat C1_SE_deduplicated.sam | awk -F '\t' '{print $3}' | sort | uniq -c
+
+Unique Reads Output:
+ 697508 1
+ 564903 10
+1220389 11
+ 359951 12
+ 467659 13
+ 387239 14
+ 437465 15
+ 360923 16
+ 517566 17
+ 290506 18
+ 571665 19
+2787018 2
+ 547615 3
+ 589839 4
+ 562160 5
+ 510818 6
+1113183 7
+ 576463 8
+ 627488 9
+      5 GL456210.1
+      6 GL456211.1
+      4 GL456212.1
+      4 GL456221.1
+    656 GL456233.2
+      1 GL456239.1
+      1 GL456354.1
+      3 GL456367.1
+      3 GL456368.1
+     21 GL456370.1
+      2 GL456379.1
+      1 GL456382.1
+      1 GL456383.1
+      1 GL456389.1
+      1 GL456390.1
+     17 GL456396.1
+    111 JH584295.1
+      3 JH584299.1
+    294 JH584304.1
+      1 LN:104073951
+      1 LN:114452
+      1 LN:120092757
+      1 LN:120883175
+      1 LN:121973369
+      1 LN:124359700
+      1 LN:125139656
+      1 LN:130127694
+      1 LN:130530862
+      1 LN:144995196
+      1 LN:149588044
+      1 LN:151758149
+      1 LN:153618
+      1 LN:155838
+      1 LN:156860686
+      1 LN:158099
+      1 LN:159745316
+      1 LN:16299
+      1 LN:169476592
+      1 LN:169725
+      1 LN:175968
+      1 LN:181755017
+      1 LN:182347
+      1 LN:184189
+      1 LN:195154279
+      1 LN:195993
+      1 LN:1976
+      1 LN:199368
+      1 LN:20208
+      1 LN:205776
+      1 LN:206961
+      1 LN:21240
+      1 LN:22974
+      1 LN:23158
+      1 LN:23629
+      1 LN:241735
+      1 LN:24323
+      1 LN:24668
+      1 LN:24685
+      1 LN:25871
+      1 LN:259875
+      1 LN:26764
+      1 LN:28664
+      1 LN:28772
+      1 LN:31129
+      1 LN:31602
+      1 LN:31704
+      1 LN:35240
+      1 LN:38659
+      1 LN:40056
+      1 LN:42057
+      1 LN:47073
+      1 LN:559103
+      1 LN:61420004
+      1 LN:72385
+      1 LN:8412
+      1 LN:90720763
+      1 LN:91455967
+      1 LN:95294699
+      1 LN:953012
+      1 LN:98008968
+ 202002 MT
+      3 MU069434.1
+   5450 MU069435.1
+      1 PN:STAR
+ 317853 X
+   2247 Y
+
