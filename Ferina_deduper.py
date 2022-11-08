@@ -4,7 +4,7 @@ import argparse
 import bioinfo
 
 def get_args():
-    parser = argparse.ArgumentParser(description="Takes in a uniquely mapped SAM file, which can be presorted by chromosome and position via samtools. Assumes reads are single-end. Outputs deduplicated SAM file.")
+    parser = argparse.ArgumentParser(description="Takes in a uniquely mapped SAM file, which can be presorted by chromosome and position via samtools, but sorting is not necessary. Assumes reads are single-end. Outputs deduplicated SAM file.")
     parser.add_argument('-f', '--file', help='specify absolute file path of presorted input SAM file')
     parser.add_argument('-o', '--outfile', help='specify absolute file path of sorted output SAM file')
     parser.add_argument('-u', '--umi', help='specify file containing known valid unique molecular identifiers (UMIs)')
